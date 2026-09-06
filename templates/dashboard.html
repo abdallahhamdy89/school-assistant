@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+
+<body>
+    <div class="app-shell">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="brand">
+                <div class="brand-icon">S</div>
+
+                <div>
+                    <div class="brand-name">School Assistant</div>
+                    <div class="brand-subtitle">Parent Dashboard</div>
+                </div>
+            </div>
+
+    	<nav class="navigation">
+    		<a href="#" class="nav-item active" data-view="dashboard">
+      	 	 <span>▦</span>
+       	 	Dashboard
+  	  </a>
+
+    	<a href="#" class="nav-item" data-view="emails">
+       		 <span>✉</span>
+       		 Emails
+    	</a>
+
+    	<a href="#" class="nav-item" data-view="classroom">
+       		 <span>🏫</span>
+       		 Classroom
+    	</a>
+
+    	<a href="#" class="nav-item" data-view="homework">
+       		 <span>📘</span>
+       		 Homework
+    	</a>
+
+    	<a href="#" class="nav-item" data-view="action">
+    	    	<span>✓</span>
+        	Action Required
+    	</a>
+
+    <a href="#" class="nav-item" data-view="settings">
+        <span>⚙</span>
+        Settings
+    </a>
+</nav>
+
+            <div class="sidebar-footer">
+                <span class="status-dot"></span>
+                School Assistant online
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+
+            <!-- TOP BAR -->
+            <header class="topbar">
+
+                <div>
+                    <h1>Dashboard</h1>
+                    <p>Your school's latest information at a glance.</p>
+                </div>
+
+                <button id="refreshButton" class="refresh-button">
+                    ↻ Refresh
+                </button>
+
+            </header>
+
+
+            <!-- LOADING -->
+            <div id="loading" class="loading">
+                Loading dashboard...
+            </div>
+
+
+            <!-- ERROR -->
+            <div id="error" class="error hidden">
+                <h3>Unable to load dashboard</h3>
+                <p id="errorMessage"></p>
+
+                <button onclick="loadDashboard()">
+                    Try again
+                </button>
+            </div>
+
+
+            <!-- DASHBOARD -->
+            <div id="dashboard" class="hidden">
+
+                <!-- SUMMARY -->
+                <section class="section">
+
+                    <div class="summary-grid">
+
+                        <div class="summary-card">
+                            <div class="card-icon email-icon">
+                                ✉
+                            </div>
+
+                            <div>
+                                <div class="card-label">
+                                    Total Emails
+                                </div>
+
+                                <div id="totalEmails" class="card-value">
+                                    0
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="summary-card">
+                            <div class="card-icon attention-icon">
+                                !
+                            </div>
+
+                            <div>
+                                <div class="card-label">
+                                    Action Required
+                                </div>
+
+                                <div id="actionRequired" class="card-value">
+                                    0
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="summary-card">
+                            <div class="card-icon priority-icon">
+                                !
+                            </div>
+
+                            <div>
+                                <div class="card-label">
+                                    High Priority
+                                </div>
+
+                                <div id="highPriority" class="card-value">
+                                    0
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </section>
+
+
+                <!-- UPCOMING DEADLINES -->
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Upcoming Deadlines</h2>
+                            <p>Dates and deadlines mentioned in your school emails.</p>
+                        </div>
+
+                    </div>
+
+                    <div id="deadlinesList" class="deadline-list">
+                    </div>
+
+                </section>
+
+
+                <!-- CATEGORIES -->
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Email Categories</h2>
+                            <p>How your school emails are classified.</p>
+                        </div>
+
+                    </div>
+
+                    <div id="categories" class="category-grid">
+                    </div>
+
+                </section>
+
+
+                <!-- ATTENTION -->
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Needs Your Attention</h2>
+                            <p>Emails that may require an action from you.</p>
+                        </div>
+
+                        <a href="#" id="attentionViewAll" class="view-all-link">
+                            View all →
+                        </a>
+
+                    </div>
+
+                    <div id="attentionList" class="attention-list">
+                    </div>
+
+                </section>
+
+
+                <!-- RECENT EMAILS -->
+                <section class="section">
+
+                    <div class="section-header">
+
+                        <div>
+                            <h2>Recent Emails</h2>
+                            <p>Your latest school communications.</p>
+                        </div>
+
+                        <a href="#" id="recentEmailsViewAll" class="view-all-link">
+                            View all →
+                        </a>
+
+                    </div>
+
+                    <div id="emailList" class="email-list">
+                    </div>
+
+                </section>
+
+				                <!-- EMAILS VIEW -->
+
+                <div id="emailsView" class="view hidden">
+
+                    <section class="section">
+
+                        <div class="section-header">
+
+                            <div>
+                                <h2>All Emails</h2>
+                                <p>Browse and search all of your processed school emails.</p>
+                            </div>
+
+                            <div id="allEmailCount" class="email-count">
+                                0 emails
+                            </div>
+
+                        </div>
+
+
+                        <!-- FILTERS -->
+
+                        <div class="email-filters">
+
+                            <div class="search-wrapper">
+
+                                <span class="search-icon">⌕</span>
+
+                                <input
+                                    type="text"
+                                    id="emailSearch"
+                                    class="email-search"
+                                    placeholder="Search emails..."
+                                >
+
+                            </div>
+
+
+                            <select id="categoryFilter" class="email-filter">
+
+                                <option value="all">
+                                    All Categories
+                                </option>
+
+                                <option value="fees">
+                                    Fees
+                                </option>
+
+                                <option value="uniform">
+                                    Uniform
+                                </option>
+
+                                <option value="event">
+                                    Event
+                                </option>
+
+                                <option value="academic">
+                                    Academic
+                                </option>
+
+                                <option value="cafeteria">
+                                    Cafeteria
+                                </option>
+
+                                <option value="announcement">
+                                    Announcement
+                                </option>
+
+                                <option value="classroom">
+                                    Classroom
+                                </option>
+
+                                <option value="homework">
+                                    Homework
+                                </option>
+
+                                <option value="other">
+                                    Other
+                                </option>
+
+                            </select>
+
+
+                            <select id="priorityFilter" class="email-filter">
+
+                                <option value="all">
+                                    All Priorities
+                                </option>
+
+                                <option value="high">
+                                    High
+                                </option>
+
+                                <option value="medium">
+                                    Medium
+                                </option>
+
+                                <option value="low">
+                                    Low
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- EMAIL LIST -->
+
+                        <div id="allEmailsList" class="email-list">
+
+                        </div>
+
+                    </section>
+
+                </div>
+                
+                      		 <!-- SETTINGS VIEW -->
+
+<div id="settingsView" class="view hidden">
+
+    <section class="section">
+
+        <div class="section-header">
+            <div>
+                <h2>Settings</h2>
+                <p>Manage and monitor your School Assistant.</p>
+            </div>
+        </div>
+
+
+        <div class="settings-grid">
+
+            <!-- CONNECTION -->
+
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h3>School Connection</h3>
+                        <p>Email source used by School Assistant.</p>
+                    </div>
+
+                    <span class="settings-status">
+                        <span class="status-dot"></span>
+                        Connected
+                    </span>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Gmail
+                    </span>
+
+                    <span class="settings-value">
+                        Connected
+                    </span>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Gmail Label
+                    </span>
+
+                    <span class="settings-value">
+                        DianaSchool
+                    </span>
+                </div>
+
+            </div>
+
+
+            <!-- AI -->
+
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h3>AI Processing</h3>
+                        <p>AI configuration used to analyze school emails.</p>
+                    </div>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Provider
+                    </span>
+
+                    <span class="settings-value">
+                        Groq
+                    </span>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Model
+                    </span>
+
+                    <span class="settings-value settings-code">
+                        openai/gpt-oss-20b
+                    </span>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Batch Size
+                    </span>
+
+                    <span class="settings-value">
+                        3 emails
+                    </span>
+                </div>
+
+            </div>
+
+
+            <!-- MANUAL PROCESSING -->
+
+            <div class="settings-card settings-card-full">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h3>Manual Processing</h3>
+                        <p>
+                            Fetch new school emails and run AI analysis manually.
+                        </p>
+                    </div>
+                </div>
+
+
+                <div class="settings-actions">
+
+                    <button
+                        id="processEmailsButton"
+                        class="settings-button"
+                    >
+                        ↻ Fetch New Emails
+                    </button>
+
+
+                    <button
+                        id="processAiButton"
+                        class="settings-button settings-button-primary"
+                    >
+                        ✦ Process with AI
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="settingsMessage"
+                    class="settings-message hidden"
+                ></div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+                <!-- CLASSROOM VIEW -->
+
+				<div id="classroomView" class="view hidden">
+
+    				<section class="section">
+
+        			<div class="section-header">
+
+           		 <div>
+               		 <h2>Classroom</h2>
+               		 <p>Posts and materials from Google Classroom.</p>
+          		  </div>
+
+           		 <div id="classroomEmailCount" class="email-count">
+              		  0 items
+          		  </div>
+
+       		 </div>
+
+        <div class="action-tabs">
+            <button type="button" class="action-tab active" data-action-tab="open">Open</button>
+            <button type="button" class="action-tab" data-action-tab="completed">Completed</button>
+        </div>
+
+        <div id="classroomEmailsList" class="attention-list">
+
+        </div>
+
+    </section>
+
+</div>
+
+
+                <!-- HOMEWORK VIEW -->
+
+				<div id="homeworkView" class="view hidden">
+
+    				<section class="section">
+
+        			<div class="section-header">
+
+           		 <div>
+               		 <h2>Homework</h2>
+               		 <p>Assigned work from your child's classes.</p>
+          		  </div>
+
+           		 <div id="homeworkEmailCount" class="email-count">
+              		  0 items
+          		  </div>
+
+       		 </div>
+
+        <div class="action-tabs">
+            <button type="button" class="action-tab active" data-action-tab="open">Open</button>
+            <button type="button" class="action-tab" data-action-tab="completed">Completed</button>
+        </div>
+
+        <div id="homeworkEmailsList" class="attention-list">
+
+        </div>
+
+    </section>
+
+</div>
+
+
+                <!-- ACTION REQUIRED VIEW -->
+
+				<div id="actionView" class="view hidden">
+
+    				<section class="section">
+
+        			<div class="section-header">
+
+           		 <div>
+               		 <h2>Needs Your Attention</h2>
+               		 <p>Emails that require an action from you.</p>
+          		  </div>
+
+           		 <div id="actionEmailCount" class="email-count">
+              		  0 items
+          		  </div>
+
+       		 </div>
+
+        <div class="action-tabs">
+            <button type="button" class="action-tab active" data-action-tab="open">Open</button>
+            <button type="button" class="action-tab" data-action-tab="completed">Completed</button>
+        </div>
+
+        <div id="actionEmailsList" class="attention-list">
+
+        </div>
+
+    </section>
+
+</div>
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+
+</body>
+</html>

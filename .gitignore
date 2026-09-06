@@ -1,0 +1,44 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+
+# Secrets
+.env
+credentials.json
+token.json
+token.json.backup
+
+# Generated data
+emails.json
+
+# Local/media files
+*.m4a
+*.mp4
+*.ogg
+*.srt
+*.tsv
+*.vtt
+4-aug.json
+4-aug.txt
+voice.json
+voice.txt
+_tcp
+
+# Dev backups
+*.backup
+*.backup-*
+*.broken
+
+# Legacy/unused scripts (superseded by app.py or unrelated one-off tests)
+gmail_reader.py
+gmail_to_json.py
+test_ollama.py
+test_openai.py
+categorize_existing_emails.py
+
+# Local tooling config
+.claude/
+
+# macOS
+.DS_Store
