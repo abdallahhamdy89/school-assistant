@@ -7,7 +7,6 @@ from urllib.parse import quote
 
 from flask import Flask, jsonify, render_template
 from bs4 import BeautifulSoup
-from openai import OpenAI
 from dotenv import load_dotenv
 from dateutil import parser as date_parser
 from google.auth.transport.requests import Request
@@ -19,8 +18,6 @@ from groq import Groq
 
 app = Flask(__name__)
 load_dotenv()
-
-openai_client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
