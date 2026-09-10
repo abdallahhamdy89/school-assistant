@@ -2,10 +2,12 @@ import os
 import re
 import json
 import base64
-from datetime import datetime
+import secrets
+from functools import wraps
+from datetime import datetime, timedelta
 from urllib.parse import quote
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request, session
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from dateutil import parser as date_parser
@@ -15,6 +17,9 @@ from googleapiclient.discovery import build
 from google.cloud import secretmanager
 from google.cloud import firestore
 from groq import Groq
+import firebase_admin
+from firebase_admin import credentials as firebase_credentials
+from firebase_admin import auth as firebase_auth
 
 app = Flask(__name__)
 load_dotenv()
@@ -35,6 +40,178 @@ LABEL_NAME = "DianaSchool"
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
 FIRESTORE_COLLECTION = "emails"
+
+# True when running on Cloud Run (which sets K_SERVICE automatically).
+# Used to require Secure cookies in production without breaking local
+# http://localhost testing.
+IS_CLOUD_RUN = bool(os.environ.get("K_SERVICE"))
+
+
+# ==========================================================
+# AUTH CONFIG
+# ==========================================================
+#
+# Required in production (Cloud Run should supply these as env vars /
+# Secret Manager-backed env vars - see README/.env.example):
+#
+#   ALLOWED_USERS     comma-separated list of Google account emails allowed
+#                      to use the app, e.g. "a@example.com, b@example.com"
+#   FLASK_SECRET_KEY   secret used to sign the session cookie
+#   FIREBASE_WEB_CONFIG  the (non-secret) Firebase web app config object as
+#                         JSON, exactly as shown in Firebase Console ->
+#                         Project settings -> "SDK setup and configuration"
+#
+# None of these are hardcoded here - if they're missing, auth-related routes
+# fail with a clear error instead of the app crashing on startup.
+
+
+def get_allowed_users():
+    raw = os.environ.get("ALLOWED_USERS", "")
+
+    return {
+        email.strip().lower()
+        for email in raw.split(",")
+        if email.strip()
+    }
+
+
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
+
+if not FLASK_SECRET_KEY:
+    FLASK_SECRET_KEY = secrets.token_hex(32)
+
+    print(
+        "WARNING: FLASK_SECRET_KEY is not set. Using a random per-process "
+        "key - fine for local development, but sessions will not persist "
+        "across restarts and will break across multiple Cloud Run "
+        "instances/workers. Set FLASK_SECRET_KEY (via Secret Manager) in "
+        "production."
+    )
+
+app.secret_key = FLASK_SECRET_KEY
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=IS_CLOUD_RUN,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
+)
+
+try:
+    FIREBASE_WEB_CONFIG = json.loads(os.environ.get("FIREBASE_WEB_CONFIG", "{}"))
+except (TypeError, ValueError):
+    FIREBASE_WEB_CONFIG = {}
+
+    print(
+        "WARNING: FIREBASE_WEB_CONFIG is not valid JSON - the login page "
+        "will report that sign-in is not configured."
+    )
+
+FIREBASE_PROJECT_ID = FIREBASE_WEB_CONFIG.get("projectId") or PROJECT_ID
+
+_firebase_app = None
+_firebase_init_error = None
+
+
+def get_firebase_app():
+    """
+    Lazily initialize the Firebase Admin SDK using Application Default
+    Credentials - the same ADC already used for Firestore/Secret Manager,
+    so no separate service-account key is introduced.
+
+    This is deliberately NOT called at import time: if Firebase isn't
+    configured (e.g. a fresh local checkout with no ADC set up yet), the
+    app must still start. Callers get a clear RuntimeError instead of a
+    raw exception from deep inside the Firebase/Google auth libraries.
+    """
+
+    global _firebase_app, _firebase_init_error
+
+    if _firebase_app is not None:
+        return _firebase_app
+
+    if _firebase_init_error is not None:
+        raise _firebase_init_error
+
+    try:
+        cred = firebase_credentials.ApplicationDefault()
+
+        _firebase_app = firebase_admin.initialize_app(
+            cred, {"projectId": FIREBASE_PROJECT_ID}
+        )
+
+        return _firebase_app
+
+    except Exception:
+        _firebase_init_error = RuntimeError(
+            "Firebase authentication is not configured on this server."
+        )
+
+        raise _firebase_init_error
+
+
+def login_required(view):
+    """
+    Require a valid, still-authorized server-side session.
+
+    401 - no session at all.
+    403 - session exists but the email is no longer in ALLOWED_USERS
+          (also clears the stale session).
+    """
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+
+        email = session.get("email")
+
+        if not email:
+            return jsonify({"status": "error", "error": "Authentication required"}), 401
+
+        if email not in get_allowed_users():
+            session.clear()
+            return jsonify({"status": "error", "error": "Not authorized"}), 403
+
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def csrf_protect(view):
+    """
+    Lightweight double-submit-cookie CSRF check for state-changing routes.
+    Pairs with the csrf_token cookie set in `set_csrf_cookie` below and the
+    X-CSRF-Token header the frontend attaches to non-GET requests.
+    """
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+
+        cookie_token = request.cookies.get("csrf_token")
+        header_token = request.headers.get("X-CSRF-Token")
+
+        if not cookie_token or not header_token or not secrets.compare_digest(cookie_token, header_token):
+            return jsonify({"status": "error", "error": "Invalid or missing CSRF token"}), 403
+
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+@app.after_request
+def set_csrf_cookie(response):
+
+    if not request.cookies.get("csrf_token"):
+
+        response.set_cookie(
+            "csrf_token",
+            secrets.token_urlsafe(32),
+            httponly=False,
+            samesite="Lax",
+            secure=IS_CLOUD_RUN,
+            max_age=int(timedelta(hours=12).total_seconds()),
+        )
+
+    return response
 
 
 # ==========================================================
@@ -542,6 +719,7 @@ def process_ai_emails(limit=3):
 
 
 @app.route("/ai-test", methods=["GET"])
+@login_required
 def ai_test():
 
     try:
@@ -589,6 +767,7 @@ def parse_flexible_date(value):
 
 
 @app.route("/dashboard", methods=["GET"])
+@login_required
 def dashboard():
     try:
         docs = list(
@@ -717,7 +896,11 @@ def dashboard():
 
 @app.route("/app", methods=["GET"])
 def dashboard_page():
-    return render_template("dashboard.html")
+    # Renders the shell for both the login screen and the dashboard - it
+    # embeds no school/email data either way, so it's safe to serve to a
+    # logged-out visitor. auth.js decides which part to show by calling
+    # /auth/me. Real protection is on every route that actually returns data.
+    return render_template("dashboard.html", firebase_config=FIREBASE_WEB_CONFIG)
 
 @app.route("/", methods=["GET"])
 def health():
@@ -725,7 +908,73 @@ def health():
     return jsonify({"status": "ok", "message": "School Assistant is running"})
 
 
-@app.route("/process", methods=["GET"])
+# ==========================================================
+# AUTH ROUTES
+# ==========================================================
+
+
+@app.route("/auth/session", methods=["POST"])
+@csrf_protect
+def create_session():
+
+    body = request.get_json(silent=True) or {}
+    id_token = body.get("idToken")
+
+    if not id_token:
+        return jsonify({"status": "error", "error": "Missing idToken"}), 400
+
+    try:
+        firebase_app = get_firebase_app()
+    except RuntimeError as e:
+        return jsonify({"status": "error", "error": str(e)}), 503
+
+    try:
+        decoded = firebase_auth.verify_id_token(id_token, app=firebase_app)
+    except Exception:
+        return jsonify({"status": "error", "error": "Invalid or expired sign-in token"}), 401
+
+    email = (decoded.get("email") or "").strip().lower()
+
+    if not email or email not in get_allowed_users():
+        return jsonify({
+            "status": "error",
+            "error": "You are not authorized to access School Assistant"
+        }), 403
+
+    session.clear()
+    session.permanent = True
+    session["email"] = email
+
+    return jsonify({"status": "ok", "email": email})
+
+
+@app.route("/auth/logout", methods=["POST"])
+@csrf_protect
+def logout():
+    session.clear()
+
+    return jsonify({"status": "ok"})
+
+
+@app.route("/auth/me", methods=["GET"])
+def auth_me():
+
+    email = session.get("email")
+
+    if email and email in get_allowed_users():
+        return jsonify({"authenticated": True, "email": email})
+
+    return jsonify({"authenticated": False})
+
+
+# ==========================================================
+# PROCESSING ROUTES
+# ==========================================================
+
+
+@app.route("/process", methods=["POST"])
+@login_required
+@csrf_protect
 def process_emails():
 
     try:
@@ -748,7 +997,9 @@ def process_emails():
         return jsonify({"status": "error", "error": str(e)}), 500
 
 
-@app.route("/process-ai", methods=["GET"])
+@app.route("/process-ai", methods=["POST"])
+@login_required
+@csrf_protect
 def process_ai():
 
     try:
@@ -771,6 +1022,7 @@ def process_ai():
 # ==========================================================
 
 @app.route("/emails", methods=["GET"])
+@login_required
 def get_emails():
 
     try:
@@ -817,6 +1069,7 @@ def get_emails():
         }), 500
 
 @app.route("/emails/high-priority", methods=["GET"])
+@login_required
 def get_high_priority_emails():
 
     try:
@@ -862,6 +1115,7 @@ def get_high_priority_emails():
         }), 500
 
 @app.route("/emails/<email_id>", methods=["GET"])
+@login_required
 def get_email(email_id):
 
     try:
@@ -896,6 +1150,7 @@ def get_email(email_id):
         }), 500
 
 @app.route("/emails/action-required", methods=["GET"])
+@login_required
 def get_action_required_emails():
 
     try:
@@ -950,6 +1205,8 @@ def get_action_required_emails():
         }), 500
         
 @app.route("/emails/<email_id>/complete", methods=["POST"])
+@login_required
+@csrf_protect
 def complete_email_action(email_id):
 
     try:
@@ -987,6 +1244,8 @@ def complete_email_action(email_id):
         
         
 @app.route("/emails/<email_id>/reopen", methods=["POST"])
+@login_required
+@csrf_protect
 def reopen_email_action(email_id):
 
     try:

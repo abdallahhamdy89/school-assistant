@@ -8,10 +8,34 @@
 </head>
 
 <body>
-    <div class="app-shell">
+
+    <!-- LOGIN VIEW -->
+    <div id="loginView" class="login-view">
+
+        <div class="login-card">
+
+            <div class="brand-icon login-brand-icon">S</div>
+
+            <div class="login-title">School Assistant</div>
+            <div class="login-subtitle">Sign in to view your family's school emails.</div>
+
+            <button id="googleSignInButton" type="button" class="google-signin-button">
+                Sign in with Google
+            </button>
+
+            <div id="loginMessage" class="login-message hidden"></div>
+
+        </div>
+
+    </div>
+
+    <div class="app-shell hidden" id="appShell">
+
+        <!-- MOBILE NAV BACKDROP -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
         <!-- SIDEBAR -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
 
             <div class="brand">
                 <div class="brand-icon">S</div>
@@ -68,9 +92,17 @@
             <!-- TOP BAR -->
             <header class="topbar">
 
-                <div>
-                    <h1>Dashboard</h1>
-                    <p>Your school's latest information at a glance.</p>
+                <div class="topbar-heading">
+
+                    <button id="mobileNavToggle" class="mobile-nav-toggle" type="button" aria-label="Open menu">
+                        ☰
+                    </button>
+
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p>Your school's latest information at a glance.</p>
+                    </div>
+
                 </div>
 
                 <button id="refreshButton" class="refresh-button">
@@ -371,6 +403,38 @@
 
         <div class="settings-grid">
 
+            <!-- ACCOUNT -->
+
+            <div class="settings-card">
+
+                <div class="settings-card-header">
+                    <div>
+                        <h3>Account</h3>
+                        <p>Your School Assistant sign-in.</p>
+                    </div>
+                </div>
+
+
+                <div class="settings-row">
+                    <span class="settings-label">
+                        Signed in as
+                    </span>
+
+                    <span class="settings-value" id="currentUserEmail">
+                        -
+                    </span>
+                </div>
+
+
+                <div class="settings-actions">
+                    <button id="logoutButton" type="button" class="settings-button">
+                        Logout
+                    </button>
+                </div>
+
+            </div>
+
+
             <!-- CONNECTION -->
 
             <div class="settings-card">
@@ -611,6 +675,14 @@
     </div>
 
 
+    <script>
+        window.__FIREBASE_CONFIG__ = {{ firebase_config | tojson }};
+    </script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+    <script src="{{ url_for('static', filename='auth.js') }}"></script>
     <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 
 </body>

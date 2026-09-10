@@ -11,7 +11,7 @@ async function loadDashboard() {
 
     try {
 
-        const response = await fetch("/dashboard");
+        const response = await apiFetch("/dashboard");
 
         if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
@@ -25,6 +25,10 @@ async function loadDashboard() {
         dashboard.classList.remove("hidden");
 
     } catch (err) {
+
+        if (err.message === "__auth_redirect__") {
+            return;
+        }
 
         console.error(err);
 
@@ -79,16 +83,30 @@ function renderCategories(categories) {
         "other"
     ];
 
-    categoryOrder.forEach(category => {
+    const categoryEmoji = {
+        fees: "💰",
+        uniform: "👕",
+        event: "📅",
+        academic: "📚",
+        cafeteria: "🍽️",
+        announcement: "📣",
+        classroom: "🏫",
+        homework: "📘",
+        other: "📎"
+    };
+
+    categoryOrder.forEach((category, index) => {
 
         const count = categories[category] ?? 0;
 
         const card = document.createElement("div");
 
         card.className = "category-card";
+        card.dataset.category = category;
+        card.style.animationDelay = `${index * 30}ms`;
 
         card.innerHTML = `
-            <div class="category-name">${escapeHtml(category)}</div>
+            <div class="category-name">${categoryEmoji[category] || ""} ${escapeHtml(category)}</div>
             <div class="category-value">${count}</div>
         `;
 
@@ -400,8 +418,28 @@ document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", function (event) {
         event.preventDefault();
         switchToView(this.dataset.view);
+        closeMobileNav();
     });
 });
+
+
+function openMobileNav() {
+    document.getElementById("sidebar").classList.add("open");
+    document.getElementById("sidebarBackdrop").classList.add("visible");
+}
+
+function closeMobileNav() {
+    document.getElementById("sidebar").classList.remove("open");
+    document.getElementById("sidebarBackdrop").classList.remove("visible");
+}
+
+document
+    .getElementById("mobileNavToggle")
+    .addEventListener("click", openMobileNav);
+
+document
+    .getElementById("sidebarBackdrop")
+    .addEventListener("click", closeMobileNav);
 
 
 document
@@ -625,7 +663,7 @@ async function loadAllEmails() {
 
     try {
 
-        const response = await fetch("/emails");
+        const response = await apiFetch("/emails");
 
         if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
@@ -642,6 +680,10 @@ async function loadAllEmails() {
         renderAllEmails();
 
     } catch (err) {
+
+        if (err.message === "__auth_redirect__") {
+            return;
+        }
 
         console.error("Failed to load emails:", err);
 
@@ -874,7 +916,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
         try {
 
-            const response = await fetch("/emails");
+            const response = await apiFetch("/emails");
 
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
@@ -895,6 +937,10 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
             render();
 
         } catch (err) {
+
+            if (err.message === "__auth_redirect__") {
+                return;
+            }
 
             console.error(`Failed to load ${listId}:`, err);
 
@@ -1042,7 +1088,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
         try {
 
-            const response = await fetch(
+            const response = await apiFetch(
                 `/emails/${encodeURIComponent(emailId)}/complete`,
                 { method: "POST" }
             );
@@ -1080,6 +1126,10 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
         } catch (err) {
 
+            if (err.message === "__auth_redirect__") {
+                return;
+            }
+
             console.error("Failed to complete item:", err);
 
             button.disabled = false;
@@ -1107,7 +1157,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
         try {
 
-            const response = await fetch(
+            const response = await apiFetch(
                 `/emails/${encodeURIComponent(emailId)}/reopen`,
                 { method: "POST" }
             );
@@ -1138,6 +1188,10 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
             render();
 
         } catch (err) {
+
+            if (err.message === "__auth_redirect__") {
+                return;
+            }
 
             console.error("Failed to reopen item:", err);
 
@@ -1255,7 +1309,7 @@ async function processNewEmails() {
 
     try {
 
-        const response = await fetch("/process");
+        const response = await apiFetch("/process", { method: "POST" });
 
         const data = await response.json();
 
@@ -1273,6 +1327,10 @@ async function processNewEmails() {
             `${data.existing ?? 0} already existed.`;
 
     } catch (err) {
+
+        if (err.message === "__auth_redirect__") {
+            return;
+        }
 
         console.error(err);
 
@@ -1306,7 +1364,7 @@ async function processWithAi() {
 
     try {
 
-        const response = await fetch("/process-ai");
+        const response = await apiFetch("/process-ai", { method: "POST" });
 
         const data = await response.json();
 
@@ -1327,6 +1385,10 @@ async function processWithAi() {
         await loadDashboard();
 
     } catch (err) {
+
+        if (err.message === "__auth_redirect__") {
+            return;
+        }
 
         console.error(err);
 
@@ -1368,4 +1430,4 @@ document
     .getElementById("processAiButton")
     .addEventListener("click", processWithAi);
 
-loadDashboard();
+initApp();
