@@ -518,6 +518,19 @@ body {
     box-shadow: 0 8px 18px rgba(19, 33, 74, 0.06);
 }
 
+.attention-group-header {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #737d8e;
+    margin: 18px 0 -2px;
+}
+
+.attention-group-header:first-child {
+    margin-top: 0;
+}
+
 .attention-item.high {
     border-left-color: #d64545;
 }

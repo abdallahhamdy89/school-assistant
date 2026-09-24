@@ -896,7 +896,7 @@ function showListError(item, message) {
 
 // Powers Action Required, Classroom, and Homework, which all share the same
 // Open/Completed tabbed layout and differ only in which emails they show.
-function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
+function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, groupByField }) {
 
     const listEl = document.getElementById(listId);
     const countEl = document.getElementById(countId);
@@ -1000,7 +1000,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
         listEl.innerHTML = "";
 
-        emails.forEach(email => {
+        function buildItemEl(email) {
 
             const item = document.createElement("div");
 
@@ -1066,7 +1066,57 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages }) {
 
             `;
 
-            listEl.appendChild(item);
+            return item;
+
+        }
+
+        if (!groupByField) {
+
+            emails.forEach(email => {
+                listEl.appendChild(buildItemEl(email));
+            });
+
+            return;
+
+        }
+
+        // Group emails by subject (e.g. Arabic, Science) while keeping the
+        // existing priority/completed-date sort order within each group.
+        const groups = new Map();
+
+        emails.forEach(email => {
+
+            const key = email[groupByField] || "General";
+
+            if (!groups.has(key)) {
+                groups.set(key, []);
+            }
+
+            groups.get(key).push(email);
+
+        });
+
+        const sortedGroupKeys = Array.from(groups.keys()).sort((a, b) => {
+
+            if (a === "General") return 1;
+            if (b === "General") return -1;
+
+            return a.localeCompare(b);
+
+        });
+
+        sortedGroupKeys.forEach(key => {
+
+            const groupHeader = document.createElement("div");
+
+            groupHeader.className = "attention-group-header";
+            groupHeader.textContent = `${key} (${groups.get(key).length})`;
+
+            listEl.appendChild(groupHeader);
+
+            groups.get(key).forEach(email => {
+                listEl.appendChild(buildItemEl(email));
+            });
 
         });
 
@@ -1282,6 +1332,7 @@ const homeworkListView = createTabbedEmailList({
     listId: "homeworkEmailsList",
     countId: "homeworkEmailCount",
     filterFn: email => email.category === "homework",
+    groupByField: "school_subject",
     emptyMessages: {
         open: {
             title: "No homework right now 🎉",

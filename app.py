@@ -567,6 +567,7 @@ def process_school_emails():
             # AI fields
             "ai_processed": False,
 	    "category": None,
+            "school_subject": None,
             "ai_summary": None,
             "action_required": None,
             "priority": None,
@@ -602,6 +603,7 @@ Return ONLY valid JSON with exactly these fields:
 
 {{
   "category": "other",
+  "school_subject": null,
   "ai_summary": "A concise summary of the email.",
   "action_required": true,
   "priority": "high",
@@ -614,8 +616,23 @@ Rules:
 - Do not invent information.
 - category must be exactly one of:
   fees, uniform, event, academic, cafeteria, announcement, classroom, homework, other.
-- classroom is for general Google Classroom posts: new material, announcements, schedules, invitations.
-- homework is specifically for assigned work with something the student must complete, e.g. an assignment, worksheet, or project, especially if it has a due date.
+- homework means the student personally has something to complete, even if the
+  word "homework" is never used. Treat any of these as homework:
+  an assignment, worksheet, project, reading, revision/study task, spelling or
+  vocabulary list to practice, pages to finish, or anything to bring back
+  completed/signed - whether it stands alone or is mentioned inside a longer
+  classroom update, newsletter, or announcement.
+- classroom is only for Google Classroom posts that do NOT contain a task for
+  the student to complete themselves: new material shared for reference,
+  general announcements, schedules, invitations.
+- if an email contains both general classroom news and a specific task for the
+  student, classify it as homework, not classroom.
+- school_subject applies only when category is "homework". Set it to the
+  specific subject the task belongs to. Prefer one of these exact values when
+  it fits: "Arabic", "Religion", "English", "Science", "Numeracy", "Literacy",
+  "German". If the task clearly belongs to a different subject not in that
+  list, use that subject's name instead. If category is not "homework", or the
+  subject truly cannot be determined, set school_subject to null.
 - action_required must be true or false.
 - priority must be one of: high, medium, low.
 - deadline must be a date explicitly mentioned in the email, otherwise null.
@@ -676,6 +693,7 @@ def process_ai_emails(limit=3):
                 {
                     "ai_processed": True,
                     "category": analysis.get("category", "other"),
+                    "school_subject": analysis.get("school_subject"),
                     "ai_summary": analysis.get("ai_summary"),
                     "action_required": analysis.get("action_required"),
                     "priority": analysis.get("priority"),
@@ -1046,6 +1064,7 @@ def get_emails():
                 "from": email.get("from"),
                 "date": email.get("date"),
                 "category": email.get("category"),
+                "school_subject": email.get("school_subject"),
                 "summary": email.get("ai_summary"),
                 "action_required": email.get("action_required"),
                 "action_status": email.get("action_status", "open"),
