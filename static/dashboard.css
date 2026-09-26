@@ -63,114 +63,6 @@ body {
     display: flex;
 }
 
-/* LOGIN */
-
-.login-view {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--navy);
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.login-view::before,
-.login-view::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(2px);
-}
-
-.login-view::before {
-    width: 260px;
-    height: 260px;
-    background: var(--gold);
-    opacity: 0.12;
-    top: -80px;
-    left: -60px;
-}
-
-.login-view::after {
-    width: 320px;
-    height: 320px;
-    background: var(--navy-lighter);
-    opacity: 0.5;
-    bottom: -120px;
-    right: -80px;
-}
-
-.login-card {
-    position: relative;
-    width: 100%;
-    max-width: 360px;
-    background: white;
-    border-radius: 24px;
-    padding: 40px 32px;
-    text-align: center;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
-    animation: bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.login-brand-icon {
-    margin: 0 auto 18px;
-}
-
-.login-title {
-    font-family: "Playfair Display", serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--navy);
-}
-
-.login-subtitle {
-    color: #737d8e;
-    font-size: 13px;
-    margin-top: 8px;
-    line-height: 1.5;
-}
-
-.google-signin-button {
-    width: 100%;
-    margin-top: 28px;
-    border: 2px solid #dfe3ea;
-    background: white;
-    color: #172033;
-    padding: 12px 16px;
-    border-radius: 14px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 700;
-    box-shadow: 0 4px 0 var(--shadow-soft);
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.08s ease;
-}
-
-.google-signin-button:hover {
-    background: var(--gold-light);
-    border-color: var(--gold);
-}
-
-.google-signin-button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 var(--shadow-soft);
-}
-
-.google-signin-button:disabled {
-    cursor: default;
-    opacity: 0.7;
-    transform: none;
-    box-shadow: 0 4px 0 var(--shadow-soft);
-}
-
-.login-message {
-    margin-top: 18px;
-    color: #c0392b;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
 /* SIDEBAR */
 
 .sidebar {
@@ -1179,8 +1071,14 @@ body {
 
 .action-tabs {
     display: flex;
+    align-items: center;
     gap: 8px;
     margin-bottom: 14px;
+}
+
+.action-tabs .email-filter {
+    height: 34px;
+    margin-left: auto;
 }
 
 .action-tab {

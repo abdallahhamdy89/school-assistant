@@ -11,7 +11,7 @@ async function loadDashboard() {
 
     try {
 
-        const response = await apiFetch("/dashboard");
+        const response = await fetch("/dashboard");
 
         if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
@@ -26,10 +26,6 @@ async function loadDashboard() {
 
     } catch (err) {
 
-        if (err.message === "__auth_redirect__") {
-            return;
-        }
-
         console.error(err);
 
         loading.classList.add("hidden");
@@ -38,7 +34,6 @@ async function loadDashboard() {
         errorMessage.textContent = err.message;
     }
 }
-
 
 function renderDashboard(data) {
 
@@ -51,11 +46,9 @@ function renderDashboard(data) {
     document.getElementById("highPriority").textContent =
         data.high_priority ?? 0;
 
-
     renderCategories(data.categories || {});
 
     renderUpcomingDeadlines(data.upcoming_deadlines || []);
-
 
     const recentEmails = data.recent_emails || [];
 
@@ -63,7 +56,6 @@ function renderDashboard(data) {
 
     renderEmails(recentEmails);
 }
-
 
 function renderCategories(categories) {
 
@@ -113,7 +105,6 @@ function renderCategories(categories) {
         container.appendChild(card);
     });
 }
-
 
 function renderUpcomingDeadlines(deadlines) {
 
@@ -185,7 +176,6 @@ function renderUpcomingDeadlines(deadlines) {
     });
 }
 
-
 function formatDaysUntil(days) {
 
     if (days === 0) {
@@ -206,7 +196,6 @@ function formatDaysUntil(days) {
 
     return `Overdue by ${Math.abs(days)} days`;
 }
-
 
 function renderAttention(emails) {
 
@@ -234,7 +223,6 @@ function renderAttention(emails) {
 
         return;
     }
-
 
     attentionEmails.forEach(email => {
 
@@ -273,7 +261,6 @@ function renderAttention(emails) {
     });
 }
 
-
 function renderEmails(emails) {
 
     const container = document.getElementById("emailList");
@@ -308,7 +295,6 @@ function renderEmails(emails) {
 
             </div>
 
-
             <div class="email-meta">
 
                 <span class="badge badge-category">
@@ -332,7 +318,6 @@ function renderEmails(emails) {
     });
 }
 
-
 function getEmailTimestamp(dateString) {
 
     if (!dateString) {
@@ -343,7 +328,6 @@ function getEmailTimestamp(dateString) {
 
     return isNaN(parsed.getTime()) ? 0 : parsed.getTime();
 }
-
 
 function formatEmailDateTime(dateString) {
 
@@ -366,7 +350,6 @@ function formatEmailDateTime(dateString) {
     });
 }
 
-
 function escapeHtml(value) {
 
     const div = document.createElement("div");
@@ -376,11 +359,9 @@ function escapeHtml(value) {
     return div.innerHTML;
 }
 
-
 document
     .getElementById("refreshButton")
     .addEventListener("click", loadDashboard);
-
 
 function switchToView(view) {
 
@@ -413,7 +394,6 @@ function switchToView(view) {
     }
 }
 
-
 document.querySelectorAll(".nav-item").forEach(item => {
     item.addEventListener("click", function (event) {
         event.preventDefault();
@@ -421,7 +401,6 @@ document.querySelectorAll(".nav-item").forEach(item => {
         closeMobileNav();
     });
 });
-
 
 function openMobileNav() {
     document.getElementById("sidebar").classList.add("open");
@@ -441,7 +420,6 @@ document
     .getElementById("sidebarBackdrop")
     .addEventListener("click", closeMobileNav);
 
-
 document
     .getElementById("attentionViewAll")
     .addEventListener("click", function (event) {
@@ -449,14 +427,12 @@ document
         switchToView("action");
     });
 
-
 document
     .getElementById("recentEmailsViewAll")
     .addEventListener("click", function (event) {
         event.preventDefault();
         switchToView("emails");
     });
-
 
 function showDashboardView() {
 
@@ -482,7 +458,6 @@ function showDashboardView() {
     document.getElementById("settingsView").classList.add("hidden");
 
 }
-
 
 async function showEmailsView() {
 
@@ -513,7 +488,6 @@ async function showEmailsView() {
 
 }
 
-
 async function showClassroomView() {
 
     document.querySelector(".topbar h1").textContent = "Classroom";
@@ -543,7 +517,6 @@ async function showClassroomView() {
 
 }
 
-
 async function showHomeworkView() {
 
     document.querySelector(".topbar h1").textContent = "Homework";
@@ -572,7 +545,6 @@ async function showHomeworkView() {
     await homeworkListView.load();
 
 }
-
 
 async function showActionView() {
 
@@ -650,7 +622,6 @@ function showSettingsView() {
 }
 let allEmails = [];
 
-
 async function loadAllEmails() {
 
     const container = document.getElementById("allEmailsList");
@@ -663,7 +634,7 @@ async function loadAllEmails() {
 
     try {
 
-        const response = await apiFetch("/emails");
+        const response = await fetch("/emails");
 
         if (!response.ok) {
             throw new Error(`Server returned ${response.status}`);
@@ -681,10 +652,6 @@ async function loadAllEmails() {
 
     } catch (err) {
 
-        if (err.message === "__auth_redirect__") {
-            return;
-        }
-
         console.error("Failed to load emails:", err);
 
         container.innerHTML = `
@@ -697,7 +664,6 @@ async function loadAllEmails() {
     }
 
 }
-
 
 function renderAllEmails() {
 
@@ -715,7 +681,6 @@ function renderAllEmails() {
 
     const priority =
         document.getElementById("priorityFilter").value;
-
 
     const filteredEmails = allEmails.filter(email => {
 
@@ -741,10 +706,8 @@ function renderAllEmails() {
 
     });
 
-
     document.getElementById("allEmailCount").textContent =
         `${filteredEmails.length} of ${allEmails.length} emails`;
-
 
     if (filteredEmails.length === 0) {
 
@@ -770,16 +733,13 @@ function renderAllEmails() {
 
     }
 
-
     container.innerHTML = "";
-
 
     filteredEmails.forEach(email => {
 
         const row = document.createElement("div");
 
         row.className = "email-row";
-
 
         row.innerHTML = `
 
@@ -808,7 +768,6 @@ function renderAllEmails() {
                 </div>
 
             </div>
-
 
             <div class="email-meta">
 
@@ -844,7 +803,6 @@ function renderAllEmails() {
 
         `;
 
-
         container.appendChild(row);
 
     });
@@ -871,7 +829,6 @@ function formatCompletedDate(isoString) {
 
 }
 
-
 function showListError(item, message) {
 
     if (!item) {
@@ -893,18 +850,54 @@ function showListError(item, message) {
 
 }
 
-
 // Powers Action Required, Classroom, and Homework, which all share the same
 // Open/Completed tabbed layout and differ only in which emails they show.
-function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, groupByField }) {
+function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, groupByField, subjectFilterId }) {
 
     const listEl = document.getElementById(listId);
     const countEl = document.getElementById(countId);
     const tabs = listEl.closest(".section").querySelectorAll(".action-tab");
+    const subjectFilterEl = subjectFilterId && document.getElementById(subjectFilterId);
 
     let openEmails = [];
     let completedEmails = [];
     let activeTab = "open";
+
+    function populateSubjectFilter() {
+
+        if (!subjectFilterEl) {
+            return;
+        }
+
+        const subjects = Array.from(
+            new Set(
+                [...openEmails, ...completedEmails]
+                    .map(email => email[groupByField])
+                    .filter(Boolean)
+            )
+        ).sort((a, b) => a.localeCompare(b));
+
+        const previousValue = subjectFilterEl.value || "all";
+
+        subjectFilterEl.innerHTML = `<option value="all">All Subjects</option>`;
+
+        subjects.forEach(subject => {
+
+            const option = document.createElement("option");
+
+            option.value = subject;
+            option.textContent = subject;
+
+            subjectFilterEl.appendChild(option);
+
+        });
+
+        subjectFilterEl.value =
+            previousValue === "all" || subjects.includes(previousValue)
+                ? previousValue
+                : "all";
+
+    }
 
     async function load() {
 
@@ -916,7 +909,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
         try {
 
-            const response = await apiFetch("/emails");
+            const response = await fetch("/emails");
 
             if (!response.ok) {
                 throw new Error(`Server returned ${response.status}`);
@@ -934,13 +927,11 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
                 email => email.action_status === "completed"
             );
 
+            populateSubjectFilter();
+
             render();
 
         } catch (err) {
-
-            if (err.message === "__auth_redirect__") {
-                return;
-            }
 
             console.error(`Failed to load ${listId}:`, err);
 
@@ -957,8 +948,13 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
     function render() {
 
-        const emails =
-            activeTab === "completed" ? completedEmails : openEmails;
+        const selectedSubject = subjectFilterEl ? subjectFilterEl.value : "all";
+
+        const emails = (
+            activeTab === "completed" ? completedEmails : openEmails
+        ).filter(
+            email => selectedSubject === "all" || email[groupByField] === selectedSubject
+        );
 
         const priorityOrder = { high: 1, medium: 2, low: 3 };
 
@@ -1070,7 +1066,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
         }
 
-        if (!groupByField) {
+        if (!groupByField || selectedSubject !== "all") {
 
             emails.forEach(email => {
                 listEl.appendChild(buildItemEl(email));
@@ -1138,7 +1134,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
         try {
 
-            const response = await apiFetch(
+            const response = await fetch(
                 `/emails/${encodeURIComponent(emailId)}/complete`,
                 { method: "POST" }
             );
@@ -1176,10 +1172,6 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
         } catch (err) {
 
-            if (err.message === "__auth_redirect__") {
-                return;
-            }
-
             console.error("Failed to complete item:", err);
 
             button.disabled = false;
@@ -1207,7 +1199,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
         try {
 
-            const response = await apiFetch(
+            const response = await fetch(
                 `/emails/${encodeURIComponent(emailId)}/reopen`,
                 { method: "POST" }
             );
@@ -1238,10 +1230,6 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
             render();
 
         } catch (err) {
-
-            if (err.message === "__auth_redirect__") {
-                return;
-            }
 
             console.error("Failed to reopen item:", err);
 
@@ -1289,10 +1277,13 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
 
     });
 
+    if (subjectFilterEl) {
+        subjectFilterEl.addEventListener("change", render);
+    }
+
     return { load };
 
 }
-
 
 const actionListView = createTabbedEmailList({
     listId: "actionEmailsList",
@@ -1310,7 +1301,6 @@ const actionListView = createTabbedEmailList({
     }
 });
 
-
 const classroomListView = createTabbedEmailList({
     listId: "classroomEmailsList",
     countId: "classroomEmailCount",
@@ -1327,12 +1317,12 @@ const classroomListView = createTabbedEmailList({
     }
 });
 
-
 const homeworkListView = createTabbedEmailList({
     listId: "homeworkEmailsList",
     countId: "homeworkEmailCount",
     filterFn: email => email.category === "homework",
     groupByField: "school_subject",
+    subjectFilterId: "homeworkSubjectFilter",
     emptyMessages: {
         open: {
             title: "No homework right now 🎉",
@@ -1360,7 +1350,7 @@ async function processNewEmails() {
 
     try {
 
-        const response = await apiFetch("/process", { method: "POST" });
+        const response = await fetch("/process", { method: "POST" });
 
         const data = await response.json();
 
@@ -1378,10 +1368,6 @@ async function processNewEmails() {
             `${data.existing ?? 0} already existed.`;
 
     } catch (err) {
-
-        if (err.message === "__auth_redirect__") {
-            return;
-        }
 
         console.error(err);
 
@@ -1415,7 +1401,7 @@ async function processWithAi() {
 
     try {
 
-        const response = await apiFetch("/process-ai", { method: "POST" });
+        const response = await fetch("/process-ai", { method: "POST" });
 
         const data = await response.json();
 
@@ -1436,10 +1422,6 @@ async function processWithAi() {
         await loadDashboard();
 
     } catch (err) {
-
-        if (err.message === "__auth_redirect__") {
-            return;
-        }
 
         console.error(err);
 
@@ -1462,11 +1444,9 @@ document
     .getElementById("emailSearch")
     .addEventListener("input", renderAllEmails);
 
-
 document
     .getElementById("categoryFilter")
     .addEventListener("change", renderAllEmails);
-
 
 document
     .getElementById("priorityFilter")
@@ -1476,9 +1456,8 @@ document
     .getElementById("processEmailsButton")
     .addEventListener("click", processNewEmails);
 
-
 document
     .getElementById("processAiButton")
     .addEventListener("click", processWithAi);
 
-initApp();
+loadDashboard();
