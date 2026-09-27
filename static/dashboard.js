@@ -1013,7 +1013,12 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
             item.innerHTML = `
 
                 <div class="attention-subject">
-                    ${escapeHtml(email.subject || "Untitled email")}
+                    <span>${escapeHtml(email.subject || "Untitled email")}</span>
+                    ${
+                        email.date
+                            ? `<span class="attention-date">${escapeHtml(formatEmailDateTime(email.date))}</span>`
+                            : ""
+                    }
                 </div>
 
                 <div class="attention-summary">

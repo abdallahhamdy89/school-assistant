@@ -428,8 +428,20 @@ body {
 }
 
 .attention-subject {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
     font-size: 14px;
     font-weight: 600;
+}
+
+.attention-date {
+    flex-shrink: 0;
+    color: #9aa3b4;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 .attention-summary {
