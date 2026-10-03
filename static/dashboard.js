@@ -794,9 +794,7 @@ function renderAllEmails() {
                 }
 
                 ${
-                    email.gmail_url
-                        ? `<a class="open-email-link" href="${escapeHtml(email.gmail_url)}" target="_blank" rel="noopener noreferrer">→ Open email</a>`
-                        : ""
+                    openEmailLinkHtml(email)
                 }
 
             </div>
@@ -1058,9 +1056,7 @@ function createTabbedEmailList({ listId, countId, filterFn, emptyMessages, group
                     ${actionButton}
 
                     ${
-                        email.gmail_url
-                            ? `<a class="open-email-link" href="${escapeHtml(email.gmail_url)}" target="_blank" rel="noopener noreferrer">→ Open email</a>`
-                            : ""
+                        openEmailLinkHtml(email)
                     }
 
                 </div>
@@ -1466,3 +1462,102 @@ document
     .addEventListener("click", processWithAi);
 
 loadDashboard();
+
+// ==========================================================
+// EMAIL VIEWER POPUP
+// Emails with a saved body open in a popup; older emails
+// (no saved body) keep the original "open in Gmail" link.
+// ==========================================================
+
+function openEmailLinkHtml(email) {
+
+    if (email.has_body && email.firestore_id) {
+        return `<a class="open-email-link" href="#" data-view-email="${escapeHtml(email.firestore_id)}">→ Open email</a>`;
+    }
+
+    if (email.gmail_url) {
+        return `<a class="open-email-link" href="${escapeHtml(email.gmail_url)}" target="_blank" rel="noopener noreferrer">→ Open email</a>`;
+    }
+
+    return "";
+}
+
+function closeEmailViewer() {
+    const modal = document.getElementById("email-viewer");
+    if (modal) modal.remove();
+    document.removeEventListener("keydown", emailViewerKeyHandler);
+}
+
+function emailViewerKeyHandler(event) {
+    if (event.key === "Escape") closeEmailViewer();
+}
+
+function emailFrameDoc(bodyHtml) {
+    // Gmail-like typography; scripts blocked by CSP and iframe sandbox.
+    return `<!doctype html><html><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https: data:;">
+<base target="_blank">
+<style>
+body { margin: 0; padding: 4px 2px; background: #fff; color: #222;
+       font-family: Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+       font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+a { color: #1a0dab; }
+img { max-width: 100%; height: auto; }
+table { max-width: 100%; }
+blockquote { margin: 0 0 0 .8ex; padding-left: 1ex; border-left: 1px solid #ccc; }
+</style></head><body>${bodyHtml}</body></html>`;
+}
+
+async function openEmailViewer(firestoreId) {
+
+    closeEmailViewer();
+
+    const modal = document.createElement("div");
+    modal.id = "email-viewer";
+    modal.className = "email-viewer-backdrop";
+    modal.innerHTML = `
+        <div class="email-viewer" role="dialog" aria-modal="true">
+            <button class="email-viewer-close" aria-label="Close">×</button>
+            <div class="email-viewer-header"><div class="email-viewer-loading">Loading…</div></div>
+        </div>`;
+    document.body.appendChild(modal);
+    document.addEventListener("keydown", emailViewerKeyHandler);
+
+    modal.addEventListener("click", event => {
+        if (event.target === modal || event.target.closest(".email-viewer-close")) {
+            closeEmailViewer();
+        }
+    });
+
+    try {
+        const response = await fetch(`/emails/${encodeURIComponent(firestoreId)}/body`);
+        const data = await response.json();
+
+        if (data.status !== "ok") {
+            throw new Error(data.error || "Could not load email");
+        }
+
+        const dialog = modal.querySelector(".email-viewer");
+        dialog.querySelector(".email-viewer-header").innerHTML = `
+            <h2 class="email-viewer-subject">${escapeHtml(data.subject || "(no subject)")}</h2>
+            <div class="email-viewer-from">${escapeHtml(data.from || "")}</div>
+            <div class="email-viewer-date">${escapeHtml(data.date || "")}</div>`;
+
+        const frame = document.createElement("iframe");
+        frame.className = "email-viewer-frame";
+        frame.setAttribute("sandbox", "allow-popups allow-popups-to-escape-sandbox");
+        frame.srcdoc = emailFrameDoc(data.body_html);
+        dialog.appendChild(frame);
+
+    } catch (error) {
+        modal.querySelector(".email-viewer-header").innerHTML =
+            `<div class="email-viewer-loading">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+document.addEventListener("click", event => {
+    const link = event.target.closest("[data-view-email]");
+    if (!link) return;
+    event.preventDefault();
+    openEmailViewer(link.getAttribute("data-view-email"));
+});

@@ -233,6 +233,56 @@ def extract_body(payload):
     return ""
 
 
+def extract_html(payload):
+    """Return the raw HTML part of a message (empty string if none)."""
+
+    if payload.get("mimeType", "") == "text/html":
+
+        data = payload.get("body", {}).get("data")
+
+        if data:
+            return decode_base64(data)
+
+    for part in payload.get("parts", []):
+
+        html = extract_html(part)
+
+        if html:
+            return html
+
+    return ""
+
+
+def sanitize_email_html(html):
+    """Strip active content so stored email HTML is safe to display."""
+
+    soup = BeautifulSoup(html or "", "html.parser")
+
+    for tag in soup(["script", "iframe", "object", "embed", "form",
+                     "meta", "link", "base", "noscript"]):
+        tag.decompose()
+
+    for tag in soup.find_all(True):
+
+        for attr in list(tag.attrs):
+
+            value = tag.attrs[attr]
+            value = " ".join(value) if isinstance(value, list) else str(value)
+
+            if attr.lower().startswith("on"):
+                del tag.attrs[attr]
+
+            elif attr.lower() in ("href", "src", "action") and \
+                    value.strip().lower().startswith("javascript:"):
+                del tag.attrs[attr]
+
+        if tag.name == "a" and tag.get("href"):
+            tag["target"] = "_blank"
+            tag["rel"] = "noopener noreferrer"
+
+    return str(soup)
+
+
 # ==========================================================
 # CLEANING
 # ==========================================================
@@ -377,6 +427,8 @@ def process_school_emails():
 
         body_clean = clean_body(body_raw)
 
+        body_html = sanitize_email_html(extract_html(payload))
+
         record = {
             "gmail_id": gmail_id,
             "thread_id": full_email.get("threadId"),
@@ -387,6 +439,7 @@ def process_school_emails():
             "date": date,
             "body_raw": body_raw,
             "body_clean": body_clean,
+            "body_html": body_html,
             # AI fields
             "ai_processed": False,
 	    "category": None,
@@ -813,6 +866,7 @@ def get_emails():
                 "firestore_id": doc.id,
                 "gmail_id": email.get("gmail_id"),
                 "gmail_url": get_email_gmail_url(email),
+                "has_body": bool(email.get("body_html")),
                 "subject": email.get("subject"),
                 "from": email.get("from"),
                 "date": email.get("date"),
@@ -919,6 +973,39 @@ def get_email(email_id):
             "error": str(e)
         }), 500
 
+@app.route("/emails/<email_id>/body", methods=["GET"])
+def get_email_body(email_id):
+
+    try:
+
+        doc = db.collection("emails").document(email_id).get()
+
+        if not doc.exists:
+            return jsonify({"status": "error", "error": "Email not found"}), 404
+
+        email = doc.to_dict()
+        body_html = email.get("body_html")
+
+        if not body_html:
+            return jsonify({
+                "status": "error",
+                "error": "No saved body",
+                "gmail_url": get_email_gmail_url(email),
+            }), 404
+
+        return jsonify({
+            "status": "ok",
+            "subject": email.get("subject"),
+            "from": email.get("from"),
+            "date": email.get("date"),
+            "body_html": sanitize_email_html(body_html),
+        })
+
+    except Exception as e:
+
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+
 @app.route("/emails/action-required", methods=["GET"])
 def get_action_required_emails():
 
@@ -947,6 +1034,7 @@ def get_action_required_emails():
                 "firestore_id": doc.id,
                 "gmail_id": email.get("gmail_id"),
                 "gmail_url": get_email_gmail_url(email),
+                "has_body": bool(email.get("body_html")),
                 "subject": email.get("subject"),
                 "from": email.get("from"),
                 "date": email.get("date"),
